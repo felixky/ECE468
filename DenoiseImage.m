@@ -1,6 +1,6 @@
 %Author: Kyle Felix
-%Date: 10/23/19
-%Description: 
+%Date: 11/20/19
+%Description: Types of noise
 
 function DenoiseImage(filename)
 clc
