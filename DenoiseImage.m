@@ -41,6 +41,7 @@ for c = 1:sz(1)         %for each row
     end
 end
 fs = fs./255;
+fss = fs.*255;
 new_name = strcat(name, 'SaltNoise.jpg');          %appending 1 to the end of the filename
 imwrite(fs, new_name);                     %Write new image to file in directory
 
@@ -53,30 +54,33 @@ gg2 = medfilt2(fg, [3 3]);  %Median Filter
 gg3 = wiener2(fg,[3 3]);    %Wiener Filter
 %Adaptive Filter
 %d = [0,0,0;0,1,0;0,0,0];
-d = [1];
+d = [255];
 fp = zeros(sz(1)+2,sz(2)+2);
 for c = 1:sz(1)         %for each row
     for s = 1:sz(2)       %for each column
-        fp(c+1,s+1) = f(c,s);      
+        fp(c+1,s+1) = fgg(c,s);      
     end
 end
-am = 0;
 wg4 = zeros(sz(1),sz(2));
-for c = 2:sz(1)         %for each row
-    for s = 2:sz(2)       %for each column
-       for i = -1:1
+w = zeros(sz(1),sz(2));
+for c = 2:sz(1)+1         %for each row
+    for s = 2:sz(2)+1       %for each column
+        am = 0;
+        av =0;
+        for i = -1:1
            for j = -1:1
-              am = fp(c+i,s+j); 
-              av = fp(c+i,s+j); 
+              am = am + fp(c+i,s+j); 
+              av = av + fp(c+i,s+j); 
            end
        end    
        am = (1/9).*am;
        av = (1/9).*((av-am)^2);
-%        wg4(c,s) = d - ((5000/av).*(d-am));
-%        gg4(c,s) = imfilter(fp(c,s), wg4(c,s));
+       wg4(c-1,s-1) = fgg(c-1,s-1) - ((5000/av)*(fgg(c-1,s-1)-am));
+       w(c-1,s-1) = ((5000/av)*(fgg(c-1,s-1)-am));
     end
-end       
-gg4 = imfilter(fg, wg4);
+end 
+imhist(w);
+gg4 = wg4./255;
 
 new_name = strcat(name, 'GaussianGaussian.jpg');          %appending 1 to the end of the filename
 imwrite(gg1, new_name);                     %Write new image to file in directory
@@ -93,10 +97,31 @@ ws1 = fspecial('gaussian',[3 3], 1);     %Gaussian filter with sigma=1
 gs1 = imfilter(fs,ws1);
 gs2 = medfilt2(fs, [3 3]);
 gs3 = wiener2(fs,[3 3]);
-am = mean(fs, 'all');
-av = var(fs, 1, 'all');        
-ws4 = d - ((5000/av).*(d-am));
-gs4 = imfilter(fs, ws4);
+
+fp = zeros(sz(1)+2,sz(2)+2);
+for c = 1:sz(1)         %for each row
+    for s = 1:sz(2)       %for each column
+        fp(c+1,s+1) = f1(c,s);      
+    end
+end
+
+ws4 = zeros(sz(1),sz(2));
+for c = 2:sz(1)+1         %for each row
+    for s = 2:sz(2)+1       %for each column
+        am = 0;
+        av =0;
+        for i = -1:1
+           for j = -1:1
+              am = am + fp(c+i,s+j); 
+              av = av + fp(c+i,s+j); 
+           end
+       end    
+       am = (1/9).*am;
+       av = (1/9).*((av-am)^2);
+       ws4(c-1,s-1) = fss(c-1,s-1) + ((5000/av)*(fss(c-1,s-1)-am));
+    end
+end 
+gs4 = ws4./255;
 
 new_name = strcat(name, 'SaltGaussian.jpg');          %appending 1 to the end of the filename
 imwrite(gs1, new_name);                     %Write new image to file in directory
