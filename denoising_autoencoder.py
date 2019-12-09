@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 
 # Set Hyperparameters
 
-epoch = 5 # Fill in
-batch_size = 25 # Fill in
+epoch = 4 # Fill in
+batch_size = 20 # Fill in
 learning_rate = .0085 # Fill in
 
 # Download Data
@@ -22,13 +22,23 @@ mnist_test  = dset.MNIST("./", train=False, transform=transforms.ToTensor(), tar
 # Set Data Loader(input pipeline)
 
 train_loader = torch.utils.data.DataLoader(dataset=mnist_train,batch_size=batch_size,shuffle=True)
+test_loader = torch.utils.data.DataLoader(dataset=mnist_test,batch_size=batch_size,shuffle=True)
 
 class Encoder(nn.Module):
     def __init__(self):
         super(Encoder,self).__init__()
 
-        self.conv1 = nn.Conv2d(1,64,3,padding=1)
-        self.norm = nn.BatchNorm2d(64)
+        self.conv1 = nn.Conv2d(1,4,3,padding=1)
+        self.conv2 = nn.Conv2d(4,8,3,padding=1)
+        self.conv3 = nn.Conv2d(8,16,3,padding=1)
+        self.conv4 = nn.Conv2d(16,32,3,padding=1)
+        self.conv5 = nn.Conv2d(32,64,3,padding=1)
+        
+        self.norm = nn.BatchNorm2d(4)
+        self.norm2 = nn.BatchNorm2d(8)
+        self.norm3 = nn.BatchNorm2d(16)
+        self.norm4 = nn.BatchNorm2d(32)
+        self.norm5 = nn.BatchNorm2d(64)        
         self.max = nn.MaxPool2d(2,2)
 
 
@@ -37,6 +47,19 @@ class Encoder(nn.Module):
 		# If you have multiple sequential layers, chain them together here
         out = F.tanh(self.conv1(x))
         out = F.tanh(self.norm(out))
+        
+        out = F.tanh(self.conv2(out))
+        out = F.tanh(self.norm2(out))
+        
+        out = F.tanh(self.conv3(out))
+        out = F.tanh(self.norm3(out))
+
+        out = F.tanh(self.conv4(out))
+        out = F.tanh(self.norm4(out))        
+
+        out = F.tanh(self.conv5(out))
+        out = F.tanh(self.norm5(out))          
+        
         out = F.tanh(self.max(out))
 
         return out
@@ -47,16 +70,42 @@ encoder = Encoder().cuda()
 class Decoder(nn.Module):
     def __init__(self):
         super(Decoder,self).__init__()
-
-        self.deconv1 = nn.ConvTranspose2d(64,1,3,2,1,1)
-        self.batch = nn.BatchNorm2d(1)
+        self.deconv1 = nn.ConvTranspose2d(64,32,3,2,1,1)
+        self.deconv2 = nn.ConvTranspose2d(32,16,3,2,1,1)
+        self.deconv3 = nn.ConvTranspose2d(16,8,3,2,1,1)
+        self.deconv4 = nn.ConvTranspose2d(8,4,3,2,1,1)
+        self.deconv5 = nn.ConvTranspose2d(4,1,3,2,1,1)
+        
+        self.batch1 = nn.BatchNorm2d(32)
+        self.batch2 = nn.BatchNorm2d(16)
+        self.batch3 = nn.BatchNorm2d(8)
+        self.batch4 = nn.BatchNorm2d(4)
+        self.batch5 = nn.BatchNorm2d(1)
+        
+        self.max = nn.MaxPool2d(2,2)
 
     def forward(self,x):
         # Put together your encoder network here
 		# If you have multiple sequential layers, chain them together here
         out = F.tanh(self.deconv1(x))
-        out = F.tanh(self.batch(out))
- 
+        out = self.batch1(out)
+        
+        out = F.tanh(self.deconv2(out))
+        out = F.tanh(self.batch2(out))
+        out = self.max(out)
+        
+        out = F.tanh(self.deconv3(out))
+        out = F.tanh(self.batch3(out))
+        out = self.max(out)
+        
+        out = F.tanh(self.deconv4(out))
+        out = F.tanh(self.batch4(out))
+        out = self.max(out)        
+
+        out = F.tanh(self.deconv5(out))
+        out = F.tanh(self.batch5(out))
+        out = self.max(out) 
+
         return out
 
 decoder = Decoder().cuda()
@@ -95,8 +144,23 @@ for i in range(epoch):
         loss.backward()
         optimizer.step()
 
-    #torch.save([encoder,decoder],'./model/deno_autoencoder.pkl')
+    torch.save([encoder,decoder],'./model/deno_autoencoder.pkl')
     print(loss)
+    
+
+for image,label in test_loader:
+    image_n = torch.mul(image+0.25, 0.1 * noise)
+    image = Variable(image).cuda()
+    image_n = Variable(image_n).cuda()
+    optimizer.zero_grad()
+    output = encoder(image_n)
+    output = decoder(output)
+    loss = loss_func(output,image)
+    loss.backward()
+#        optimizer.step()
+
+#    torch.save([encoder,decoder],'./model/deno_autoencoder.pkl')
+print("test ",loss)    
 
 # check single image with noise and denoised
 
